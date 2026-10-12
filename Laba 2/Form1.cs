@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Windows.Forms;
@@ -16,6 +17,11 @@ namespace Laba_2
     {
       InitializeComponent();
       _httpClient = new HttpClient();
+
+      CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+      CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+
+      dgvData.Columns["colValue"].ValueType = typeof(double);
     }
 
     // ============ EXCEL ============
@@ -56,8 +62,8 @@ namespace Laba_2
         {
           string value = row.Cell(1).GetString();
 
-          int number;
-          if (int.TryParse(value, out number))
+          double number;
+          if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out number))
           {
             int rowIndex = dgvData.Rows.Add();
             dgvData.Rows[rowIndex].Cells["colValue"].Value = number;
@@ -158,8 +164,8 @@ namespace Laba_2
         string[] cells = line.Split(',');
         if (cells.Length == 0) continue;
 
-        int number;
-        if (int.TryParse(cells[0].Trim(), out number))
+        double number;
+        if (double.TryParse(cells[0].Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out number))
         {
           int rowIndex = dgvData.Rows.Add();
           dgvData.Rows[rowIndex].Cells["colValue"].Value = number;
@@ -170,7 +176,18 @@ namespace Laba_2
     // ============ РАСЧЁТ ============
     private void рассчитатьToolStripMenuItem_Click(object sender, EventArgs e)
     {
-      int[] data = ReadDataFromGrid();
+      if (chkBogo.Checked)
+      {
+        if (string.IsNullOrWhiteSpace(txtBogoLimit.Text))
+        {
+          MessageBox.Show("Для BOGO обязательно укажите лимит итераций — иначе программа зависнет.",
+                          "Ошибка",
+                          MessageBoxButtons.OK, MessageBoxIcon.Error);
+          return;
+        }
+      }
+
+      double[] data = ReadDataFromGrid();
 
       if (data.Length == 0)
       {
@@ -180,6 +197,17 @@ namespace Laba_2
       }
 
       bool ascending = rbAscending.Checked;
+
+      long bogoLimit = 100000;
+      if (chkBogo.Checked)
+      {
+        if (!long.TryParse(txtBogoLimit.Text, out bogoLimit) || bogoLimit <= 0)
+        {
+          MessageBox.Show("Лимит итераций BOGO должен быть целым числом > 0.", "Ошибка",
+                          MessageBoxButtons.OK, MessageBoxIcon.Error);
+          return;
+        }
+      }
 
       List<SortResult> results = new List<SortResult>();
 
@@ -196,7 +224,7 @@ namespace Laba_2
         results.Add(RunAndMeasure("Быстрая", () => SortAlgorithms.QuickSort(data, ascending)));
 
       if (chkBogo.Checked)
-        results.Add(RunAndMeasure("BOGO", () => SortAlgorithms.BogoSort(data, ascending)));
+        results.Add(RunAndMeasure("BOGO", () => SortAlgorithms.BogoSort(data, ascending, bogoLimit)));
 
       if (results.Count == 0)
       {
@@ -208,16 +236,17 @@ namespace Laba_2
       ShowResults(results);
     }
 
-    private int[] ReadDataFromGrid()
+    private double[] ReadDataFromGrid()
     {
-      List<int> numbers = new List<int>();
+      List<double> numbers = new List<double>();
 
       foreach (DataGridViewRow row in dgvData.Rows)
       {
         if (row.Cells["colValue"].Value == null) continue;
 
-        int number;
-        if (int.TryParse(row.Cells["colValue"].Value.ToString(), out number))
+        double number;
+        if (double.TryParse(row.Cells["colValue"].Value.ToString(),
+                            NumberStyles.Any, CultureInfo.InvariantCulture, out number))
         {
           numbers.Add(number);
         }
@@ -226,16 +255,17 @@ namespace Laba_2
       return numbers.ToArray();
     }
 
-    private SortResult RunAndMeasure(string name, Func<int[]> sortFunc)
+    private SortResult RunAndMeasure(string name, Func<double[]> sortFunc)
     {
       Stopwatch stopwatch = new Stopwatch();
       stopwatch.Start();
 
-      int[] sorted = sortFunc();
+      double[] sorted = sortFunc();
+      long iterations = SortAlgorithms.LastIterations;
 
       stopwatch.Stop();
 
-      return new SortResult(name, sorted, stopwatch.ElapsedMilliseconds);
+      return new SortResult(name, sorted, stopwatch.ElapsedMilliseconds, iterations);
     }
 
     private void ShowResults(List<SortResult> results)
@@ -247,7 +277,7 @@ namespace Laba_2
 
       foreach (SortResult r in results)
       {
-        output += $"{r.AlgorithmName}: {r.ElapsedMilliseconds} мс\r\n";
+        output += $"{r.AlgorithmName}: {r.ElapsedMilliseconds} мс ({r.Iterations} итераций)\r\n";
 
         if (r.ElapsedMilliseconds < minTime)
         {
@@ -262,7 +292,7 @@ namespace Laba_2
       {
         dgvData.Rows.Clear();
 
-        foreach (int value in results[0].SortedArray)
+        foreach (double value in results[0].SortedArray)
         {
           int rowIndex = dgvData.Rows.Add();
           dgvData.Rows[rowIndex].Cells["colValue"].Value = value;
@@ -288,21 +318,72 @@ namespace Laba_2
     // ============ ГЕНЕРАЦИЯ ============
     private void сгенерироватьДанныеToolStripMenuItem_Click(object sender, EventArgs e)
     {
-      Random random = new Random();
+      if (string.IsNullOrWhiteSpace(txtCount.Text))
+      {
+        MessageBox.Show("Введите количество чисел.", "Ошибка",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+        return;
+      }
 
+      int count;
+      if (!int.TryParse(txtCount.Text, out count) || count <= 0)
+      {
+        MessageBox.Show("Количество должно быть целым числом > 0.", "Ошибка",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+        return;
+      }
+
+      if (string.IsNullOrWhiteSpace(txtMin.Text))
+      {
+        MessageBox.Show("Введите минимум интервала.", "Ошибка",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+        return;
+      }
+
+      double min;
+      if (!double.TryParse(txtMin.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out min))
+      {
+        MessageBox.Show("Минимум должен быть числом.", "Ошибка",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+        return;
+      }
+
+      if (string.IsNullOrWhiteSpace(txtMax.Text))
+      {
+        MessageBox.Show("Введите максимум интервала.", "Ошибка",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+        return;
+      }
+
+      double max;
+      if (!double.TryParse(txtMax.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out max))
+      {
+        MessageBox.Show("Максимум должен быть числом.", "Ошибка",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+        return;
+      }
+
+      if (min >= max)
+      {
+        MessageBox.Show("Минимум должен быть меньше максимума.", "Ошибка",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+        return;
+      }
+
+      Random random = new Random();
       dgvData.Rows.Clear();
 
-      int rowCount = 1000;
-
-      for (int i = 0; i < rowCount; i++)
+      for (int i = 0; i < count; i++)
       {
-        int value = random.Next(1, 101);
+        double value;
+        value = min + random.NextDouble() * (max - min);
+        value = Math.Round(value, 2);
 
         int rowIndex = dgvData.Rows.Add();
         dgvData.Rows[rowIndex].Cells["colValue"].Value = value;
       }
 
-      txtResults.Text = $"Сгенерировано {rowCount} чисел.";
+      txtResults.Text = $"Сгенерировано {count} чисел в интервале [{min}; {max}]";
     }
 
     // ============ ВЫХОД ============
@@ -320,7 +401,7 @@ namespace Laba_2
                       MessageBoxIcon.Information);
     }
 
-    // ============ ЗАЩИТА: ТОЛЬКО ЦИФРЫ ============
+    // ============ ЗАЩИТА ВВОДА ============
     private void dgvData_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
     {
       if (dgvData.CurrentCell == null) return;
@@ -337,10 +418,12 @@ namespace Laba_2
 
     private void TextBox_KeyPress_OnlyDigits(object sender, KeyPressEventArgs e)
     {
-      if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
-      {
-        e.Handled = true;
-      }
+      if (char.IsControl(e.KeyChar)) return;
+      if (char.IsDigit(e.KeyChar)) return;
+      if (e.KeyChar == '.' || e.KeyChar == ',') return;
+      if (e.KeyChar == '-') return;
+
+      e.Handled = true;
     }
 
     private void dgvData_CellContentClick(object sender, DataGridViewCellEventArgs e)

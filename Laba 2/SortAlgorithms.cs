@@ -5,53 +5,69 @@ namespace Laba_2
   public class SortResult
   {
     public string AlgorithmName { get; set; }
-    public int[] SortedArray { get; set; }
+    public double[] SortedArray { get; set; }
     public long ElapsedMilliseconds { get; set; }
+    public long Iterations { get; set; }
 
-    public SortResult(string algorithmName, int[] sortedArray, long elapsedMilliseconds)
+    public SortResult(string algorithmName, double[] sortedArray, long elapsedMilliseconds, long iterations)
     {
       AlgorithmName = algorithmName;
       SortedArray = sortedArray;
       ElapsedMilliseconds = elapsedMilliseconds;
+      Iterations = iterations;
     }
   }
 
   public static class SortAlgorithms
   {
-    public static int[] BubbleSort(int[] array, bool ascending)
+    public static long LastIterations { get; private set; }
+
+    // ========== 1. Пузырьковая ==========
+    public static double[] BubbleSort(double[] array, bool ascending)
     {
-      int[] result = (int[])array.Clone();
+      double[] result = (double[])array.Clone();
       int n = result.Length;
+      long iterations = 0;
 
       for (int i = 0; i < n - 1; i++)
       {
         for (int j = 0; j < n - i - 1; j++)
         {
+          iterations++;
           bool needSwap = ascending ? result[j] > result[j + 1] : result[j] < result[j + 1];
+
           if (needSwap)
           {
-            int temp = result[j];
+            double temp = result[j];
             result[j] = result[j + 1];
             result[j + 1] = temp;
           }
         }
       }
 
+      LastIterations = iterations;
       return result;
     }
 
-    public static int[] InsertionSort(int[] array, bool ascending)
+    // ========== 2. Вставками ==========
+    public static double[] InsertionSort(double[] array, bool ascending)
     {
-      int[] result = (int[])array.Clone();
+      double[] result = (double[])array.Clone();
       int n = result.Length;
+      long iterations = 0;
 
       for (int i = 1; i < n; i++)
       {
-        int key = result[i];
+        double key = result[i];
         int j = i - 1;
 
-        while (j >= 0 && (ascending ? result[j] > key : result[j] < key))
+        while (j >= 0)
         {
+          iterations++;
+          bool needSwap = ascending ? result[j] > key : result[j] < key;
+
+          if (!needSwap) break;
+
           result[j + 1] = result[j];
           j--;
         }
@@ -59,23 +75,28 @@ namespace Laba_2
         result[j + 1] = key;
       }
 
+      LastIterations = iterations;
       return result;
     }
 
-    public static int[] ShakerSort(int[] array, bool ascending)
+    // ========== 3. Шейкерная ==========
+    public static double[] ShakerSort(double[] array, bool ascending)
     {
-      int[] result = (int[])array.Clone();
+      double[] result = (double[])array.Clone();
       int left = 0;
       int right = result.Length - 1;
+      long iterations = 0;
 
       while (left < right)
       {
         for (int i = left; i < right; i++)
         {
+          iterations++;
           bool needSwap = ascending ? result[i] > result[i + 1] : result[i] < result[i + 1];
+
           if (needSwap)
           {
-            int temp = result[i];
+            double temp = result[i];
             result[i] = result[i + 1];
             result[i + 1] = temp;
           }
@@ -84,10 +105,12 @@ namespace Laba_2
 
         for (int i = right; i > left; i--)
         {
+          iterations++;
           bool needSwap = ascending ? result[i - 1] > result[i] : result[i - 1] < result[i];
+
           if (needSwap)
           {
-            int temp = result[i];
+            double temp = result[i];
             result[i] = result[i - 1];
             result[i - 1] = temp;
           }
@@ -95,68 +118,81 @@ namespace Laba_2
         left++;
       }
 
+      LastIterations = iterations;
       return result;
     }
 
-    public static int[] QuickSort(int[] array, bool ascending)
+    // ========== 4. Быстрая ==========
+    public static double[] QuickSort(double[] array, bool ascending)
     {
-      int[] result = (int[])array.Clone();
-      QuickSortRecursive(result, 0, result.Length - 1, ascending);
+      double[] result = (double[])array.Clone();
+      long iterations = 0;
+      QuickSortRecursive(result, 0, result.Length - 1, ascending, ref iterations);
+      LastIterations = iterations;
       return result;
     }
 
-    private static void QuickSortRecursive(int[] array, int low, int high, bool ascending)
+    private static void QuickSortRecursive(double[] array, int low, int high, bool ascending, ref long iterations)
     {
       if (low < high)
       {
-        int pivotIndex = Partition(array, low, high, ascending);
-        QuickSortRecursive(array, low, pivotIndex - 1, ascending);
-        QuickSortRecursive(array, pivotIndex + 1, high, ascending);
+        int pivotIndex = Partition(array, low, high, ascending, ref iterations);
+        QuickSortRecursive(array, low, pivotIndex - 1, ascending, ref iterations);
+        QuickSortRecursive(array, pivotIndex + 1, high, ascending, ref iterations);
       }
     }
 
-    private static int Partition(int[] array, int low, int high, bool ascending)
+    private static int Partition(double[] array, int low, int high, bool ascending, ref long iterations)
     {
-      int pivot = array[high];
+      double pivot = array[high];
       int i = low - 1;
 
       for (int j = low; j < high; j++)
       {
+        iterations++;
         bool needSwap = ascending ? array[j] <= pivot : array[j] >= pivot;
+
         if (needSwap)
         {
           i++;
-          int temp = array[i];
+          double temp = array[i];
           array[i] = array[j];
           array[j] = temp;
         }
       }
 
-      int tempSwap = array[i + 1];
+      double tempSwap = array[i + 1];
       array[i + 1] = array[high];
       array[high] = tempSwap;
 
       return i + 1;
     }
 
-    public static int[] BogoSort(int[] array, bool ascending)
+    // ========== 5. BOGO (с лимитом итераций) ==========
+    public static double[] BogoSort(double[] array, bool ascending, long maxIterations)
     {
-      int[] result = (int[])array.Clone();
+      double[] result = (double[])array.Clone();
       Random random = new Random();
+      long iterations = 0;
 
-      int maxLength = Math.Min(result.Length, 8);
-
-      while (!IsSorted(result, ascending, maxLength))
+      while (!IsSorted(result, ascending))
       {
-        Shuffle(result, maxLength, random);
+        Shuffle(result, random);
+        iterations++;
+
+        if (iterations >= maxIterations)
+        {
+          break;
+        }
       }
 
+      LastIterations = iterations;
       return result;
     }
 
-    private static bool IsSorted(int[] array, bool ascending, int length)
+    private static bool IsSorted(double[] array, bool ascending)
     {
-      for (int i = 0; i < length - 1; i++)
+      for (int i = 0; i < array.Length - 1; i++)
       {
         if (ascending && array[i] > array[i + 1]) return false;
         if (!ascending && array[i] < array[i + 1]) return false;
@@ -164,12 +200,12 @@ namespace Laba_2
       return true;
     }
 
-    private static void Shuffle(int[] array, int length, Random random)
+    private static void Shuffle(double[] array, Random random)
     {
-      for (int i = 0; i < length - 1; i++)
+      for (int i = 0; i < array.Length - 1; i++)
       {
-        int j = random.Next(i, length);
-        int temp = array[i];
+        int j = random.Next(i, array.Length);
+        double temp = array[i];
         array[i] = array[j];
         array[j] = temp;
       }

@@ -49,6 +49,14 @@
       dgvData = new DataGridView();
       colValue = new DataGridViewTextBoxColumn();
       txtResults = new TextBox();
+      lblCount = new Label();
+      lblMin = new Label();
+      lblMax = new Label();
+      lblBogoLimit = new Label();
+      txtCount = new TextBox();
+      txtMin = new TextBox();
+      txtMax = new TextBox();
+      txtBogoLimit = new TextBox();
       menuStrip1.SuspendLayout();
       ((System.ComponentModel.ISupportInitialize)dgvData).BeginInit();
       SuspendLayout();
@@ -234,11 +242,83 @@
       txtResults.Size = new Size(450, 250);
       txtResults.TabIndex = 9;
       // 
+      // lblCount
+      // 
+      lblCount.AutoSize = true;
+      lblCount.Location = new Point(371, 73);
+      lblCount.Name = "lblCount";
+      lblCount.Size = new Size(75, 15);
+      lblCount.TabIndex = 10;
+      lblCount.Text = "Количество:";
+      // 
+      // lblMin
+      // 
+      lblMin.AutoSize = true;
+      lblMin.Location = new Point(371, 109);
+      lblMin.Name = "lblMin";
+      lblMin.Size = new Size(66, 15);
+      lblMin.TabIndex = 11;
+      lblMin.Text = "Минимум:";
+      // 
+      // lblMax
+      // 
+      lblMax.AutoSize = true;
+      lblMax.Location = new Point(371, 145);
+      lblMax.Name = "lblMax";
+      lblMax.Size = new Size(70, 15);
+      lblMax.TabIndex = 12;
+      lblMax.Text = "Максимум:";
+      // 
+      // lblBogoLimit
+      // 
+      lblBogoLimit.AutoSize = true;
+      lblBogoLimit.Location = new Point(565, 73);
+      lblBogoLimit.Name = "lblBogoLimit";
+      lblBogoLimit.Size = new Size(133, 15);
+      lblBogoLimit.TabIndex = 13;
+      lblBogoLimit.Text = "Макс. итераций BOGO:";
+      // 
+      // txtCount
+      // 
+      txtCount.Location = new Point(452, 65);
+      txtCount.Name = "txtCount";
+      txtCount.Size = new Size(100, 23);
+      txtCount.TabIndex = 14;
+      // 
+      // txtMin
+      // 
+      txtMin.Location = new Point(452, 101);
+      txtMin.Name = "txtMin";
+      txtMin.Size = new Size(100, 23);
+      txtMin.TabIndex = 15;
+      // 
+      // txtMax
+      // 
+      txtMax.Location = new Point(452, 137);
+      txtMax.Name = "txtMax";
+      txtMax.Size = new Size(100, 23);
+      txtMax.TabIndex = 16;
+      // 
+      // txtBogoLimit
+      // 
+      txtBogoLimit.Location = new Point(704, 65);
+      txtBogoLimit.Name = "txtBogoLimit";
+      txtBogoLimit.Size = new Size(100, 23);
+      txtBogoLimit.TabIndex = 17;
+      // 
       // Form1
       // 
       AutoScaleDimensions = new SizeF(7F, 15F);
       AutoScaleMode = AutoScaleMode.Font;
       ClientSize = new Size(984, 661);
+      Controls.Add(txtBogoLimit);
+      Controls.Add(txtMax);
+      Controls.Add(txtMin);
+      Controls.Add(txtCount);
+      Controls.Add(lblBogoLimit);
+      Controls.Add(lblMax);
+      Controls.Add(lblMin);
+      Controls.Add(lblCount);
       Controls.Add(txtResults);
       Controls.Add(dgvData);
       Controls.Add(rbDescending);
@@ -282,5 +362,13 @@
     private DataGridView dgvData;
     private TextBox txtResults;
     private DataGridViewTextBoxColumn colValue;
+    private Label lblCount;
+    private Label lblMin;
+    private Label lblMax;
+    private Label lblBogoLimit;
+    private TextBox txtCount;
+    private TextBox txtMin;
+    private TextBox txtMax;
+    private TextBox txtBogoLimit;
   }
 }
